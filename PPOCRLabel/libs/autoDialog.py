@@ -31,9 +31,10 @@ class Worker(QThread):
             findex = 0
             for Imgpath in self.mImgList:
                 if self.handle == 0:
+                    # 发送信号
                     self.listValue.emit(Imgpath)
                     if self.model == 'paddle':
-                        self.result_dic = self.ocr.ocr(Imgpath, cls=True, det=True)
+                        self.result_dic = self.ocr.ocr(Imgpath)
 
                     # 结果保存
                     if self.result_dic is None or len(self.result_dic) == 0:
@@ -44,12 +45,18 @@ class Worker(QThread):
                             chars = res[1][0]
                             cond = res[1][1]
                             posi = res[0]
-                            self.listValue.emit("文字:" + chars + " 置信度:" + str(cond) + " 坐标:" + json.dumps(posi))
-                        self.mainThread.result_dic = self.result_dic
-                        self.mainThread.filePath = Imgpath
-                        # 保存
-                        self.mainThread.saveFile(mode='Auto')
+                            self.listValue.emit("识别结果:" + chars + " 置信度:" + str(cond) + " 坐标:" + json.dumps(posi))
+                        if len(self.result_dic) > 1 or res[1][1] < 0.89:
+                            self.mainThread.result_dic = self.result_dic
+                            self.mainThread.filePath = Imgpath
+                            # self.mainThread.saveFile(mode='Auto')
+                            self.mainThread.saveUnRecFile(mode='Auto')
+                        else:
+                            self.mainThread.result_dic = self.result_dic
+                            self.mainThread.filePath = Imgpath
+                            self.mainThread.saveFile(mode='Auto')
                     findex += 1
+                    # 在子线程内将进度条的数值通过pyqtSignal发射出来
                     self.progressBarValue.emit(findex)
                 else:
                     break
@@ -87,12 +94,13 @@ class AutoDialog(QDialog):
         bb.button(BB.Ok).setEnabled(False)
 
         self.setLayout(layout)
-        self.setWindowTitle("自动标注中")
+        self.setWindowTitle("自动识别中")
         self.setWindowModality(Qt.ApplicationModal)
 
         # self.setWindowFlags(Qt.WindowCloseButtonHint)
-
+        # 实例化一个线程对象
         self.thread_1 = Worker(self.ocr, self.mImgList, self.parent, 'paddle')
+        # 线程结束后要触发的函数
         self.thread_1.progressBarValue.connect(self.handleProgressBarSingal)
         self.thread_1.listValue.connect(self.handleListWidgetSingal)
         self.thread_1.endsignal.connect(self.handleEndsignalSignal)
@@ -136,6 +144,7 @@ class AutoDialog(QDialog):
             print(self.edit.text())
 
     def popUp(self):
+        # 启动线程
         self.thread_1.start()
         return 1 if self.exec_() else None
 

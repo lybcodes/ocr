@@ -1,12 +1,15 @@
 TrainReader:
-  reader_function: ppocr.data.rec.dataset_traversal,LMDBReader
+  reader_function: ppocr.data.rec.dataset_traversal,SimpleReader
   num_workers: 8
-  lmdb_sets_dir: ./train_data/data_lmdb_release/training/
+  img_set_dir: ./train_data/rec_train_data4
+  label_file_path: ./train_data/rec_gt_train4.txt
   
 EvalReader:
-  reader_function: ppocr.data.rec.dataset_traversal,LMDBReader
-  lmdb_sets_dir: ./train_data/data_lmdb_release/validation/
+  reader_function: ppocr.data.rec.dataset_traversal,SimpleReader
+  img_set_dir: ./train_data/rec_train_data4
+  label_file_path: ./train_data/rec_gt_test4.txt
 
 TestReader:
-  reader_function: ppocr.data.rec.dataset_traversal,LMDBReader
-  lmdb_sets_dir: ./train_data/data_lmdb_release/evaluation/
+  reader_function: ppocr.data.rec.dataset_traversal,SimpleReader
+  img_set_dir: ./train_data/rec_train_data4
+  label_file_path: ./train_data/rec_gt_test4.txt

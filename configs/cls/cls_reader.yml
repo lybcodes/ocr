@@ -2,7 +2,7 @@ TrainReader:
   reader_function: ppocr.data.cls.dataset_traversal,SimpleReader
   num_workers: 8
   img_set_dir: ./train_data/cls
-  label_file_path: ./train_data/cls/train.txt
+  label_file_path: ./train_data/cls/crop_img.txt
   
 EvalReader:
   reader_function: ppocr.data.cls.dataset_traversal,SimpleReader

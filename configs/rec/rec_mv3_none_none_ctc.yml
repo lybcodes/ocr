@@ -1,21 +1,24 @@
 Global:
   algorithm: Rosetta
   use_gpu: true
-  epoch_num: 72
+  epoch_num: 400
   log_smooth_window: 20
   print_batch_step: 10
-  save_model_dir: output/rec_Rosetta
-  save_epoch_step: 3
-  eval_batch_step: 2000
-  train_batch_size_per_card: 256
-  test_batch_size_per_card: 256
-  image_shape: [3, 32, 100]
-  max_text_length: 25
-  character_type: en
-  character_dict_path:
+  save_model_dir: ./output/rec_Rosetta5/
+  save_epoch_step: 10
+  eval_batch_step: 500
+  train_batch_size_per_card: 10
+  test_batch_size_per_card: 5
+  image_shape: [3, 32, 192]
+  max_text_length: 10
+  min_text_length: 4
+  character_type: ch
+  character_dict_path: ./ppocr/utils/dict/number_dict.txt
   loss_type: ctc
+  distort: true
+  debug: false
   reader_yml: ./configs/rec/rec_benchmark_reader.yml
-  pretrain_weights: 
+  pretrain_weights: ./output/rec_Rosetta4/best_accuracy
   checkpoints:
   save_inference_dir:
   infer_img:
@@ -37,6 +40,10 @@ Loss:
 
 Optimizer:
   function: ppocr.optimizer,AdamDecay
-  base_lr: 0.001
+  base_lr: 0.0005
   beta1: 0.9
   beta2: 0.999
+  decay:
+    function: cosine_decay
+    step_each_epoch: 320
+    total_epoch: 400

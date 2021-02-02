@@ -1,20 +1,20 @@
 Global:
   algorithm: DB
   use_gpu: true
-  epoch_num: 1200
+  epoch_num: 400
   log_smooth_window: 20
   print_batch_step: 2
-  save_model_dir: ./output/det_db/
-  save_epoch_step: 200
+  save_model_dir: ./output/det_db5/
+  save_epoch_step: 10
   # evaluation is run every 5000 iterations after the 4000th iteration
-  eval_batch_step: [4000, 5000]
-  train_batch_size_per_card: 16
-  test_batch_size_per_card: 16
-  image_shape: [3, 640, 640]
+  eval_batch_step: 500
+  train_batch_size_per_card: 10
+  test_batch_size_per_card: 1
+  image_shape: [3, 960, 960]
   reader_yml: ./configs/det/det_db_icdar15_reader.yml
-  pretrain_weights: ./pretrain_models/MobileNetV3_large_x0_5_pretrained/
+  pretrain_weights: ./output/det_db4/best_accuracy
   checkpoints:
-  save_res_path: ./output/det_db/predicts_db.txt
+  save_res_path: ./output/det_db5/predicts_db.txt
   save_inference_dir:
   infer_img:
   
@@ -49,8 +49,8 @@ Optimizer:
   beta2: 0.999
   decay:                                                                                                                         
     function: cosine_decay_warmup
-    step_each_epoch: 16                                                                                                         
-    total_epoch: 1200
+    step_each_epoch: 190
+    total_epoch: 400
 
 PostProcess:
   function: ppocr.postprocess.db_postprocess,DBPostProcess

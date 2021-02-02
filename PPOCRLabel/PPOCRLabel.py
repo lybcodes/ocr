@@ -24,11 +24,13 @@ import sys
 from functools import partial
 from collections import defaultdict
 import json
+import datetime
+import time
 
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(__dir__)
-sys.path.append(os.path.abspath(os.path.join(__dir__, '../..')))
+# sys.path.append(os.path.abspath(os.path.join(__dir__, '../..')))
 sys.path.append("..")
 
 from paddleocr import PaddleOCR
@@ -66,7 +68,10 @@ from libs.toolBar import ToolBar
 from libs.ustr import ustr
 from libs.hashableQListWidgetItem import HashableQListWidgetItem
 
-__appname__ = 'PPOCRLabel'
+__appname__ = 'MOEMIL'
+__fullName__ = '摩米视觉实验室'
+__address__ = '电子科技大学'
+__contact__ = 'xxxxxxxxxxx'
 
 
 class WindowMixin(object):
@@ -107,10 +112,16 @@ class MainWindow(QMainWindow, WindowMixin):
         getStr = lambda strId: self.stringBundle.getString(strId)
 
         self.defaultSaveDir = defaultSaveDir
-        self.ocr = PaddleOCR(use_pdserving=False, use_angle_cls=True, det=True, cls=True, use_gpu=False, lang=lang)
+        self.ocr = PaddleOCR(use_gpu=False,
+                             det_model_dir=__dir__ + '/inference/det_db8/',
+                             cls_model_dir=__dir__ + '/inference/cls/',
+                             rec_model_dir=__dir__ + '/inference/rec_Rosetta7/',
+                             rec_image_shape="3, 32, 192",
+                             rec_char_dict_path=__dir__ + '/ppocr/utils/dict/number_dict.txt',
+                             use_angle_cls=True)
 
-        if os.path.exists('./data/paddle.png'):
-            result = self.ocr.ocr('./data/paddle.png', cls=True, det=True)
+        # if os.path.exists('./data/img0_crop_0.jpg'):
+        #     result = self.ocr.ocr('./data/img0_crop_0.jpg')
 
         # For loading all image under a directory
         self.mImgList = []
@@ -131,8 +142,8 @@ class MainWindow(QMainWindow, WindowMixin):
 
         self._noSelectionSlot = False
         self._beginner = True
-        self.screencastViewer = self.getAvailableScreencastViewer()
-        self.screencast = "https://github.com/PaddlePaddle/PaddleOCR"
+        # self.screencastViewer = self.getAvailableScreencastViewer()
+        # self.screencast = ""
 
         # Load predefined classes to the list
         self.loadPredefinedClasses(defaultPrefdefClassFile)
@@ -148,7 +159,6 @@ class MainWindow(QMainWindow, WindowMixin):
         self.prevLabelText = getStr('tempLabel')
         self.model = 'paddle'
         self.PPreader = None
-        self.autoSaveNum = 10
 
         ################# file list  ###############
         self.fileListWidget = QListWidget()
@@ -160,7 +170,7 @@ class MainWindow(QMainWindow, WindowMixin):
         
         self.AutoRecognition = QToolButton()
         self.AutoRecognition.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
-        self.AutoRecognition.setIcon(newIcon('Auto'))
+        self.AutoRecognition.setIcon(newIcon('Auto', 50))
         # self.AutoRecognition.setIconSize(QSize(100,20))
         # self.AutoRecognition.setFixedSize(QSize(80,30))
         # self.AutoRecognition.setStyleSheet('text-align:center;')#border:none;font-size : 12pt;
@@ -189,17 +199,17 @@ class MainWindow(QMainWindow, WindowMixin):
         self.editButton = QToolButton()
         self.reRecogButton = QToolButton()
         self.reRecogButton.setIcon(newIcon('reRec', 30))
-        # self.reRecogButton.setFixedSize(QSize(80,30))
+        self.reRecogButton.setFixedSize(QSize(80,60))
         self.reRecogButton.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
 
         self.newButton = QToolButton()
         self.newButton.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
-        # self.newButton.setFixedSize(QSize(80, 30))
+        self.newButton.setFixedSize(QSize(80, 60))
         self.SaveButton = QToolButton()
         self.SaveButton.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
-        # self.SaveButton.setFixedSize(QSize(60, 30))
-        self.DelButton = QToolButton()
-        self.DelButton.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.SaveButton.setFixedSize(QSize(60, 50))
+        # self.DelButton = QToolButton()
+        # self.DelButton.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         # self.DelButton.setFixedSize(QSize(80, 30))
 
 
@@ -208,7 +218,10 @@ class MainWindow(QMainWindow, WindowMixin):
         lefttoptoolbox.addWidget(self.reRecogButton)
         lefttoptoolboxcontainer = QWidget()
         lefttoptoolboxcontainer.setLayout(lefttoptoolbox)
-        listLayout.addWidget(lefttoptoolboxcontainer)
+        self.lefttoptoolboxDock = QDockWidget(getStr('boxLabelText'), self)
+        self.lefttoptoolboxDock.setWidget(lefttoptoolboxcontainer)
+        self.lefttoptoolboxDock.setFeatures(QDockWidget.NoDockWidgetFeatures)
+        listLayout.addWidget(self.lefttoptoolboxDock)
 
 
         ################## label list ####################
@@ -223,6 +236,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.labelList.itemChanged.connect(self.labelItemChanged)
         self.labelListDock = QDockWidget(getStr('recognitionResult'),self)
         self.labelListDock.setWidget(self.labelList)
+        self.labelListDock.setFont(QFont("Microsoft YaHei", 10, QFont.Bold))
         self.labelListDock.setFeatures(QDockWidget.NoDockWidgetFeatures)
         listLayout.addWidget(self.labelListDock)
 
@@ -236,20 +250,26 @@ class MainWindow(QMainWindow, WindowMixin):
         self.BoxList.itemChanged.connect(self.boxItemChanged)
         self.BoxListDock = QDockWidget(getStr('detectionBoxposition'), self)
         self.BoxListDock.setWidget(self.BoxList)
+        self.BoxListDock.setFont(QFont("Microsoft YaHei", 10, QFont.Bold))
         self.BoxListDock.setFeatures(QDockWidget.NoDockWidgetFeatures)
         listLayout.addWidget(self.BoxListDock)
 
         ############ lower right area ############
         leftbtmtoolbox = QHBoxLayout()
         leftbtmtoolbox.addWidget(self.SaveButton)
-        leftbtmtoolbox.addWidget(self.DelButton)
+        # leftbtmtoolbox.addWidget(self.DelButton)
         leftbtmtoolboxcontainer = QWidget()
         leftbtmtoolboxcontainer.setLayout(leftbtmtoolbox)
         listLayout.addWidget(leftbtmtoolboxcontainer)
 
-        self.dock = QDockWidget(getStr('boxLabelText'), self)
-        self.dock.setObjectName(getStr('labels'))
+        self.dock = QDockWidget('', self)
+        # self.dock.setObjectName(getStr('labels'))
         self.dock.setWidget(labelListContainer)
+        self.dock.setFeatures(QDockWidget.NoDockWidgetFeatures)
+        # 去掉右侧大Dock的标题栏
+        newWidget = QWidget()
+        self.dock.setTitleBarWidget(newWidget)
+
 
 
         ########## zoom bar #########
@@ -268,7 +288,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.imgsliderDock = QDockWidget(getStr('ImageResize'), self)
         self.imgsliderDock.setObjectName(getStr('IR'))
         self.imgsliderDock.setWidget(self.imgsplider)
-        self.imgsliderDock.setFeatures(QDockWidget.DockWidgetFloatable)
+        self.imgsliderDock.setFeatures(QDockWidget.NoDockWidgetFeatures)
         # op = QGraphicsOpacityEffect()
         # op.setOpacity(0.2)
         # self.imgsliderDock.setGraphicsEffect(op)
@@ -293,7 +313,9 @@ class MainWindow(QMainWindow, WindowMixin):
         # self.preButton.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
         self.preButton.setStyleSheet('border: none;')
         self.iconlist = QListWidget()
+        # 以图标模式显示
         self.iconlist.setViewMode(QListView.IconMode)
+        # 从左到右排列
         self.iconlist.setFlow(QListView.TopToBottom)
         self.iconlist.setSpacing(10)
         self.iconlist.setIconSize(QSize(50, 50))
@@ -350,7 +372,6 @@ class MainWindow(QMainWindow, WindowMixin):
         centerLayout = QVBoxLayout()
         centerLayout.setContentsMargins(0, 0, 0, 0)
         centerLayout.addWidget(scroll)
-        #centerLayout.addWidget(self.icondock)
         centerLayout.addWidget(iconListContainer,0,Qt.AlignCenter)
         centercontainer = QWidget()
         centercontainer.setLayout(centerLayout)
@@ -368,9 +389,9 @@ class MainWindow(QMainWindow, WindowMixin):
 
 
         # self.filedock.setFeatures(QDockWidget.DockWidgetFloatable)
-        self.filedock.setFeatures(self.filedock.features() ^ QDockWidget.DockWidgetFloatable)
+        self.filedock.setFeatures(QDockWidget.NoDockWidgetFeatures)
 
-        self.dockFeatures = QDockWidget.DockWidgetClosable | QDockWidget.DockWidgetFloatable
+        self.dockFeatures = QDockWidget.NoDockWidgetFeatures
         self.dock.setFeatures(self.dock.features() ^ self.dockFeatures)
 
         self.filedock.setFeatures(QDockWidget.NoDockWidgetFeatures)
@@ -398,11 +419,11 @@ class MainWindow(QMainWindow, WindowMixin):
         save = action(getStr('save'), self.saveFile,
                       'Ctrl+S', 'save', getStr('saveDetail'), enabled=False)
 
-        alcm = action(getStr('choosemodel'), self.autolcm,
-                                        'Ctrl+M', 'next', getStr('tipchoosemodel'))
+        # alcm = action(getStr('choosemodel'), self.autolcm,
+        #                                 'Ctrl+M', 'next', getStr('tipchoosemodel'))
 
-        deleteImg = action(getStr('deleteImg'), self.deleteImg, 'Ctrl+D', 'close', getStr('deleteImgDetail'),
-                           enabled=True)
+        # deleteImg = action(getStr('deleteImg'), self.deleteImg, 'Ctrl+D', 'close', getStr('deleteImgDetail'),
+        #                    enabled=True)
 
         resetAll = action(getStr('resetAll'), self.resetAll, None, 'resetall', getStr('resetAllDetail'))
 
@@ -424,13 +445,13 @@ class MainWindow(QMainWindow, WindowMixin):
                       enabled=False)
 
         hideAll = action(getStr('hideBox'), partial(self.togglePolygons, False),
-                         'Ctrl+H', 'hide', getStr('hideAllBoxDetail'),
+                         'Tab', 'hide', getStr('hideAllBoxDetail'),
                          enabled=False)
         showAll = action(getStr('showBox'), partial(self.togglePolygons, True),
-                         'Ctrl+A', 'hide', getStr('showAllBoxDetail'),
+                         'Tab', 'hide', getStr('showAllBoxDetail'),
                          enabled=False)
 
-        help = action(getStr('tutorial'), self.showTutorialDialog, None, 'help', getStr('tutorialDetail'))
+        # help = action(getStr('tutorial'), self.showTutorialDialog, None, 'help', getStr('tutorialDetail'))
         showInfo = action(getStr('info'), self.showInfoDialog, None, 'help', getStr('info'))
         showSteps = action(getStr('steps'), self.showStepsDialog, None, 'help', getStr('steps'))
 
@@ -471,10 +492,10 @@ class MainWindow(QMainWindow, WindowMixin):
 
         ######## New actions #######
         AutoRec = action(getStr('autoRecognition'), self.autoRecognition,
-                      'Ctrl+Shift+A', 'Auto', getStr('autoRecognition'), enabled=False)
+                      '', 'Auto', getStr('autoRecognition'), enabled=False)
 
         reRec = action(getStr('reRecognition'), self.reRecognition, 
-                      'Ctrl+Shift+R', 'reRec', getStr('reRecognition'), enabled=False)
+                      '', 'reRec', getStr('reRecognition'), enabled=False)
 
         createpoly = action(getStr('creatPolygon'), self.createPolygon,
                             'p', 'new', 'Creat Polygon', enabled=True)
@@ -484,7 +505,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
         self.editButton.setDefaultAction(edit)
         self.newButton.setDefaultAction(create)
-        self.DelButton.setDefaultAction(deleteImg)
+        # self.DelButton.setDefaultAction(deleteImg)
         self.SaveButton.setDefaultAction(save)
         self.AutoRecognition.setDefaultAction(AutoRec)
         self.reRecogButton.setDefaultAction(reRec)
@@ -532,13 +553,13 @@ class MainWindow(QMainWindow, WindowMixin):
 
         # Draw squares/rectangles
         self.drawSquaresOption = QAction(getStr('drawSquares'), self)
-        self.drawSquaresOption.setShortcut('Ctrl+Shift+R')
+        # self.drawSquaresOption.setShortcut('Ctrl+Shift+R')
         self.drawSquaresOption.setCheckable(True)
         self.drawSquaresOption.setChecked(settings.get(SETTING_DRAW_SQUARE, False))
         self.drawSquaresOption.triggered.connect(self.toogleDrawSquare)
 
         # Store actions for further handling.
-        self.actions = struct(save=save,  open=open,  resetAll=resetAll, deleteImg=deleteImg,
+        self.actions = struct(save=save,  open=open,  resetAll=resetAll,
                               lineColor=color1, create=create, delete=delete, edit=edit, copy=copy,
                               saveRec=saveRec,
                               createMode=createMode, editMode=editMode,
@@ -563,7 +584,7 @@ class MainWindow(QMainWindow, WindowMixin):
             file=self.menu('&'+getStr('mfile')),
             edit=self.menu('&'+getStr('medit')),
             view=self.menu('&'+getStr('mview')),
-            autolabel=self.menu('&PaddleOCR'),
+            export=self.menu('&'+getStr('mexport')),
             help=self.menu('&'+getStr('mhelp')),
             recentFiles=QMenu('Open &Recent'),
             labelList=labelMenu)
@@ -571,19 +592,19 @@ class MainWindow(QMainWindow, WindowMixin):
 
         # Sync single class mode from PR#106
         self.singleClassMode = QAction(getStr('singleClsMode'), self)
-        self.singleClassMode.setShortcut("Ctrl+Shift+S")
+        # self.singleClassMode.setShortcut("Ctrl+Shift+S")
         self.singleClassMode.setCheckable(True)
         self.singleClassMode.setChecked(settings.get(SETTING_SINGLE_CLASS, False))
         self.lastLabel = None
         # Add option to enable/disable labels being displayed at the top of bounding boxes
         self.displayLabelOption = QAction(getStr('displayLabel'), self)
-        self.displayLabelOption.setShortcut("Ctrl+Shift+P")
+        # self.displayLabelOption.setShortcut("Ctrl+Shift+P")
         self.displayLabelOption.setCheckable(True)
         self.displayLabelOption.setChecked(settings.get(SETTING_PAINT_LABEL, False))
         self.displayLabelOption.triggered.connect(self.togglePaintLabelsOption)
 
         addActions(self.menus.file,
-                   (opendir, None, save,  resetAll, deleteImg, quit))
+                   (opendir, None, save,  resetAll, quit))
 
         addActions(self.menus.help, (showSteps, showInfo))
         addActions(self.menus.view, (
@@ -593,7 +614,7 @@ class MainWindow(QMainWindow, WindowMixin):
             zoomIn, zoomOut, zoomOrg, None,
             fitWindow, fitWidth))
 
-        addActions(self.menus.autolabel, (alcm, saveRec, None, help)) #
+        addActions(self.menus.export, (saveRec, None))
 
         self.menus.file.aboutToShow.connect(self.updateFileMenu)
 
@@ -767,23 +788,26 @@ class MainWindow(QMainWindow, WindowMixin):
     def advanced(self):
         return not self.beginner()
 
+    # 执行可执行程序
     def getAvailableScreencastViewer(self):
-        osName = platform.system()
-
-        if osName == 'Windows':
-            return ['C:\\Program Files\\Internet Explorer\\iexplore.exe']
-        elif osName == 'Linux':
-            return ['xdg-open']
-        elif osName == 'Darwin':
-            return ['open']
+        pass
+        # osName = platform.system()
+        #
+        # if osName == 'Windows':
+        #     return ['C:\\Program Files\\Internet Explorer\\iexplore.exe']
+        # elif osName == 'Linux':
+        #     return ['xdg-open']
+        # elif osName == 'Darwin':
+        #     return ['open']
 
     ## Callbacks ##
     def showTutorialDialog(self):
-        subprocess.Popen(self.screencastViewer + [self.screencast])
+        pass
+         # subprocess.Popen(self.screencastViewer + [self.screencast])
 
     def showInfoDialog(self):
         from libs.__init__ import __version__
-        msg = u'Name:{0} \nApp Version:{1} \n{2} '.format(__appname__, __version__, sys.version_info)
+        msg = u'Name: {0} \nAddress: {1} \nContact: {2} '.format(__fullName__, __address__, __contact__)
         QMessageBox.information(self, u'Information', msg)
 
     def showStepsDialog(self):
@@ -807,7 +831,8 @@ class MainWindow(QMainWindow, WindowMixin):
         self.actions.editMode.setEnabled(not drawing)
         if not drawing and self.beginner():
             # Cancel creation.
-            print('Cancel creation.')
+            # print('Cancel creation.')
+            create_log_to_txt(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '  Cancel creation'+'\n')
             self.canvas.setEditing(True)
             self.canvas.restoreCursor()
             self.actions.create.setEnabled(True)
@@ -890,16 +915,16 @@ class MainWindow(QMainWindow, WindowMixin):
             try:
                 text_list = eval(text)
             except:
-                msg_box = QMessageBox(QMessageBox.Warning, 'Warning', 'Please enter the correct format')
+                msg_box = QMessageBox(QMessageBox.Warning, 'Warning', '请输入正确的格式！！！')
                 msg_box.exec_()
                 return
             if len(text_list) < 4:
-                msg_box = QMessageBox(QMessageBox.Warning, 'Warning', 'Please enter the coordinates of 4 points')
+                msg_box = QMessageBox(QMessageBox.Warning, 'Warning', '请输入四个点的坐标！！！')
                 msg_box.exec_()
                 return
             for box in text_list:
                 if box[0] > width or box[0] < 0 or box[1] > height or box[1] < 0:
-                    msg_box = QMessageBox(QMessageBox.Warning, 'Warning', 'Out of picture size')
+                    msg_box = QMessageBox(QMessageBox.Warning, 'Warning', '坐标值超出图片大小，请检查！！！')
                     msg_box.exec_()
                     return
 
@@ -1284,7 +1309,8 @@ class MainWindow(QMainWindow, WindowMixin):
             if unicodeFilePath in self.mImgList:
                 index = self.mImgList.index(unicodeFilePath)
                 fileWidgetItem = self.fileListWidget.item(index)
-                print('unicodeFilePath is', unicodeFilePath)
+                # print('unicodeFilePath is', unicodeFilePath)
+                create_log_to_txt(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '  unicodeFilePath is'+unicodeFilePath+'\n')
                 fileWidgetItem.setSelected(True)
                 ###
                 self.iconlist.clear()
@@ -1372,7 +1398,7 @@ class MainWindow(QMainWindow, WindowMixin):
         for box in self.PPlabel[imgidx]:
             shapes.append((box['transcription'], box['points'], None, None, box['difficult']))
 
-        print(shapes)
+        # print(shapes)
         self.loadLabels(shapes)
         self.canvas.verified = False
 
@@ -1532,7 +1558,9 @@ class MainWindow(QMainWindow, WindowMixin):
                 item = QListWidgetItem(closeicon, filename)
             self.fileListWidget.addItem(item)
 
-        print('dirPath in importDirImages is', dirpath)
+        # print('dirPath in importDirImages is', dirpath)
+        create_log_to_txt(
+            datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '   dirPath in importDirImages is'+dirpath+'\n')
         self.iconlist.clear()
         self.additems5(dirpath)
         self.changeFileFolder = True
@@ -1592,7 +1620,8 @@ class MainWindow(QMainWindow, WindowMixin):
             else:
                 self.mImgList5 = self.indexTo5Files(currIndex)
         if filename:
-            print('file name in openNext is ',filename)
+            # print('file name in openNext is ',filename)
+            create_log_to_txt(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '   file name in openNext is '+filename+'\n')
             self.loadFile(filename)
 
     def openFile(self, _value=False):
@@ -1607,6 +1636,7 @@ class MainWindow(QMainWindow, WindowMixin):
                 filename = filename[0]
             self.loadFile(filename)
             # print('filename in openfile is ', self.filePath)
+            create_log_to_txt(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + ' filename in openfile is '+self.filePath+'\n')
         self.filePath = None
         self.fileListWidget.clear()
         self.iconlist.clear()
@@ -1622,7 +1652,8 @@ class MainWindow(QMainWindow, WindowMixin):
             self.setDirty()
         self.fileListWidget.addItem(filename)
         self.additems5(None)
-        print('opened image is', filename)
+        # print('opened image is', filename)
+        create_log_to_txt(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + ' opened image is'+filename+'\n')
         
     def updateFileListIcon(self, filename):
         pass
@@ -1640,6 +1671,15 @@ class MainWindow(QMainWindow, WindowMixin):
             savedPath = os.path.join(imgFileDir, savedFileName)
             self._saveFile(savedPath if self.labelFile
                            else self.saveFileDialog(removeExt=False), mode=mode)
+
+    def saveUnRecFile(self, _value=False, mode='Manual'):
+        imgFileDir = os.path.abspath(self.filePath)
+        imgFileName = os.path.basename(self.filePath)
+        recErr_img = os.path.dirname(self.filePath) + '/recErr_img/'
+        if not os.path.exists(recErr_img):
+            os.mkdir(recErr_img)
+        img = cv2.imread(imgFileDir)
+        cv2.imwrite(recErr_img+imgFileName, img)
 
     def saveFileAs(self, _value=False):
         assert not self.image.isNull(), "cannot save empty image"
@@ -1674,9 +1714,9 @@ class MainWindow(QMainWindow, WindowMixin):
                 item.setIcon(newIcon('done'))
 
                 self.fileStatedict[self.filePath] = 1
-                if len(self.fileStatedict)%self.autoSaveNum ==0:
-                    self.saveFilestate()
-                    self.savePPlabel(mode='Auto')
+                # if len(self.fileStatedict)%self.autoSaveNum == 0:
+                self.saveFilestate()
+                self.savePPlabel(mode='Auto')
 
                 self.fileListWidget.insertItem(int(currIndex), item)
                 self.openNextImg()
@@ -1684,10 +1724,20 @@ class MainWindow(QMainWindow, WindowMixin):
 
         elif mode == 'Auto':
             if annotationFilePath and self.saveLabels(annotationFilePath, mode=mode):
-
                 self.setClean()
                 self.statusBar().showMessage('Saved to  %s' % annotationFilePath)
                 self.statusBar().show()
+                currIndex = self.mImgList.index(self.filePath)
+                item = self.fileListWidget.item(currIndex)
+                item.setIcon(newIcon('done'))
+
+                self.fileStatedict[self.filePath] = 1
+                # if len(self.fileStatedict)%self.autoSaveNum == 0:
+                self.saveFilestate()
+                self.savePPlabel(mode='Auto')
+                self.fileListWidget.insertItem(int(currIndex), item)
+                self.actions.saveRec.setEnabled(True)
+
 
     def closeFile(self, _value=False):
         if not self.mayContinue():
@@ -1699,40 +1749,42 @@ class MainWindow(QMainWindow, WindowMixin):
         self.actions.saveAs.setEnabled(False)
 
     def deleteImg(self):
-        deletePath = self.filePath
-        if deletePath is not None:
-            deleteInfo = self.deleteImgDialog()
-            if deleteInfo == QMessageBox.Yes:
-                if platform.system() == 'Windows':
-                    from win32com.shell import shell, shellcon
-                    shell.SHFileOperation((0, shellcon.FO_DELETE, deletePath, None,
-                                               shellcon.FOF_SILENT | shellcon.FOF_ALLOWUNDO | shellcon.FOF_NOCONFIRMATION,
-                                               None, None))
-                    # linux
-                elif platform.system() == 'Linux':
-                    cmd = 'trash ' + deletePath
-                    os.system(cmd)
-                    # macOS
-                elif platform.system() == 'Darwin':
-                    import subprocess
-                    absPath = os.path.abspath(deletePath).replace('\\', '\\\\').replace('"', '\\"')
-                    cmd = ['osascript', '-e',
-                           'tell app "Finder" to move {the POSIX file "' + absPath + '"} to trash']
-                    print(cmd)
-                    subprocess.call(cmd, stdout=open(os.devnull, 'w'))
-
-                if self.filePath in self.fileStatedict.keys():
-                    self.fileStatedict.pop(self.filePath)
-                imgidx = self.getImglabelidx(self.filePath)
-                if imgidx in self.PPlabel.keys():
-                    self.PPlabel.pop(imgidx)
-                self.openNextImg()
-                self.importDirImages(self.lastOpenDir, isDelete=True)
+        pass
+        # deletePath = self.filePath
+        # if deletePath is not None:
+        #     deleteInfo = self.deleteImgDialog()
+        #     if deleteInfo == QMessageBox.Yes:
+        #         if platform.system() == 'Windows':
+        #             from win32com.shell import shell, shellcon
+        #             shell.SHFileOperation((0, shellcon.FO_DELETE, deletePath, None,
+        #                                        shellcon.FOF_SILENT | shellcon.FOF_ALLOWUNDO | shellcon.FOF_NOCONFIRMATION,
+        #                                        None, None))
+        #             # linux
+        #         elif platform.system() == 'Linux':
+        #             cmd = 'trash ' + deletePath
+        #             os.system(cmd)
+        #             # macOS
+        #         elif platform.system() == 'Darwin':
+        #             import subprocess
+        #             absPath = os.path.abspath(deletePath).replace('\\', '\\\\').replace('"', '\\"')
+        #             cmd = ['osascript', '-e',
+        #                    'tell app "Finder" to move {the POSIX file "' + absPath + '"} to trash']
+        #             print(cmd)
+        #             subprocess.call(cmd, stdout=open(os.devnull, 'w'))
+        #
+        #         if self.filePath in self.fileStatedict.keys():
+        #             self.fileStatedict.pop(self.filePath)
+        #         imgidx = self.getImglabelidx(self.filePath)
+        #         if imgidx in self.PPlabel.keys():
+        #             self.PPlabel.pop(imgidx)
+        #         self.openNextImg()
+        #         self.importDirImages(self.lastOpenDir, isDelete=True)
 
     def deleteImgDialog(self):
-        yes, cancel = QMessageBox.Yes, QMessageBox.Cancel
-        msg = u'The image will be deleted to the recycle bin'
-        return QMessageBox.warning(self, u'Attention', msg, yes | cancel)
+        pass
+        # yes, cancel = QMessageBox.Yes, QMessageBox.Cancel
+        # msg = u'The image will be deleted to the recycle bin'
+        # return QMessageBox.warning(self, u'Attention', msg, yes | cancel)
 
     def resetAll(self):
         self.settings.reset()
@@ -1755,7 +1807,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def discardChangesDialog(self):
         yes, no, cancel = QMessageBox.Yes, QMessageBox.No, QMessageBox.Cancel
-        msg = u'You have unsaved changes, would you like to save them and proceed?\nClick "No" to undo all changes.'
+        msg = u'存在未保存的改动, 是否保存并继续?\n点击 "No" 撤销所有改动'
         return QMessageBox.warning(self, u'Attention', msg, yes | no | cancel)
 
     def errorMessage(self, title, message):
@@ -1766,7 +1818,7 @@ class MainWindow(QMainWindow, WindowMixin):
         return os.path.dirname(self.filePath) if self.filePath else '.'
 
     def chooseColor1(self):
-        color = self.colorDialog.getColor(self.lineColor, u'Choose line color',
+        color = self.colorDialog.getColor(self.lineColor, u'选择线条颜色',
                                           default=DEFAULT_LINE_COLOR)
         if color:
             self.lineColor = color
@@ -1783,7 +1835,7 @@ class MainWindow(QMainWindow, WindowMixin):
                 action.setEnabled(False)
 
     def chshapeLineColor(self):
-        color = self.colorDialog.getColor(self.lineColor, u'Choose line color',
+        color = self.colorDialog.getColor(self.lineColor, u'选择线条颜色',
                                           default=DEFAULT_LINE_COLOR)
         if color:
             self.canvas.selectedShape.line_color = color
@@ -1791,7 +1843,7 @@ class MainWindow(QMainWindow, WindowMixin):
             self.setDirty()
 
     def chshapeFillColor(self):
-        color = self.colorDialog.getColor(self.fillColor, u'Choose fill color',
+        color = self.colorDialog.getColor(self.fillColor, u'选择填充颜色',
                                           default=DEFAULT_FILL_COLOR)
         if color:
             self.canvas.selectedShape.fill_color = color
@@ -1867,11 +1919,13 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def autoRecognition(self):
         assert self.mImgList is not None
-        print('Using model from ', self.model)
+        # print('Using model from ', self.model)
 
         uncheckedList = [i for i in self.mImgList if i not in self.fileStatedict.keys()]
         self.autoDialog = AutoDialog(parent=self, ocr=self.ocr, mImgList=uncheckedList, lenbar=len(uncheckedList))
+        # 线程开启
         self.autoDialog.popUp()
+
         self.currIndex=len(self.mImgList)
         self.loadFile(self.filePath) # ADD
         self.haveAutoReced = True
@@ -1882,7 +1936,6 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def reRecognition(self):
         img = cv2.imread(self.filePath)
-        # org_box = [dic['points'] for dic in self.PPlabel[self.getImglabelidx(self.filePath)]]
         if self.canvas.shapes:
             self.result_dic = []
             rec_flag = 0
@@ -1894,13 +1947,15 @@ class MainWindow(QMainWindow, WindowMixin):
                     msg = 'Can not recognise the detection box in ' + self.filePath + '. Please change manually'
                     QMessageBox.information(self, "Information", msg)
                     return
-                result = self.ocr.ocr(img_crop, cls=True, det=False)
+                result = self.ocr.ocr(img_crop, cls=False, det=False)
                 if result[0][0] is not '':
                     result.insert(0, box)
-                    print('result in reRec is ', result)
+                    # print('result in reRec is ', result)
+                    create_log_to_txt(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '  label no change'+'\n')
                     self.result_dic.append(result)
                     if result[1][0] == shape.label:
-                        print('label no change')
+                        # print('label no change')
+                        create_log_to_txt(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '  label no change'+'\n')
                     else:
                         rec_flag += 1
 
@@ -1909,55 +1964,65 @@ class MainWindow(QMainWindow, WindowMixin):
                 self.loadFile(self.filePath)
                 self.setDirty()
             elif len(self.result_dic) == len(self.canvas.shapes) and rec_flag == 0:
-                QMessageBox.information(self, "Information", "The recognition result remains unchanged!")
+                QMessageBox.information(self, "Information", "识别结果已存在!")
             else:
-                print('Can not recgonise in ', self.filePath)
+                # print('Can not recgonise in ', self.filePath)
+                create_log_to_txt(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '  Can not recgonise in '+self.filePath+'\n')
         else:
-            QMessageBox.information(self, "Information", "Draw a box!")
+            self.result_dic = self.ocr.ocr(img)
+            # self.result_dic.append(result)
+            # print('result in reRec is ', self.result_dic)
+            if self.result_dic is not None:
+                self.saveFile(mode='Auto')
+                self.loadFile(self.filePath)
+                self.setDirty()
+
 
 
     def autolcm(self):
-        vbox = QVBoxLayout()
-        hbox = QHBoxLayout()
-        self.panel = QLabel()
-        self.panel.setText(self.stringBundle.getString('choseModelLg'))
-        self.panel.setAlignment(Qt.AlignLeft)
-        self.comboBox = QComboBox()
-        self.comboBox.setObjectName("comboBox")
-        self.comboBox.addItems(['Chinese & English', 'English', 'French', 'German', 'Korean', 'Japanese'])
-        # self.comboBox_lg = QComboBox()
-        # self.comboBox_lg.setObjectName("comboBox_language")
-        vbox.addWidget(self.panel)
-        vbox.addWidget(self.comboBox)
-        self.dialog = QDialog()
-        self.dialog.resize(300, 100)
-        self.okBtn = QPushButton(self.stringBundle.getString('ok'))
-        self.cancelBtn = QPushButton(self.stringBundle.getString('cancel'))
-
-        self.okBtn.clicked.connect(self.modelChoose)
-        self.cancelBtn.clicked.connect(self.cancel)
-        self.dialog.setWindowTitle(self.stringBundle.getString('choseModelLg'))
-
-        hbox.addWidget(self.okBtn)
-        hbox.addWidget(self.cancelBtn)
-
-        vbox.addWidget(self.panel)
-        vbox.addLayout(hbox)
-        self.dialog.setLayout(vbox)
-        self.dialog.setWindowModality(Qt.ApplicationModal)
-        self.dialog.exec_()
-        if self.filePath:
-            self.AutoRecognition.setEnabled(True)
+        pass
+        # vbox = QVBoxLayout()
+        # hbox = QHBoxLayout()
+        # self.panel = QLabel()
+        # self.panel.setText(self.stringBundle.getString('choseModelLg'))
+        # self.panel.setAlignment(Qt.AlignLeft)
+        # self.comboBox = QComboBox()
+        # self.comboBox.setObjectName("comboBox")
+        # self.comboBox.addItems(['Chinese & English', 'English', 'French', 'German', 'Korean', 'Japanese'])
+        # # self.comboBox_lg = QComboBox()
+        # # self.comboBox_lg.setObjectName("comboBox_language")
+        # vbox.addWidget(self.panel)
+        # vbox.addWidget(self.comboBox)
+        # self.dialog = QDialog()
+        # self.dialog.resize(300, 100)
+        # self.okBtn = QPushButton(self.stringBundle.getString('ok'))
+        # self.cancelBtn = QPushButton(self.stringBundle.getString('cancel'))
+        #
+        # self.okBtn.clicked.connect(self.modelChoose)
+        # self.cancelBtn.clicked.connect(self.cancel)
+        # self.dialog.setWindowTitle(self.stringBundle.getString('choseModelLg'))
+        #
+        # hbox.addWidget(self.okBtn)
+        # hbox.addWidget(self.cancelBtn)
+        #
+        # vbox.addWidget(self.panel)
+        # vbox.addLayout(hbox)
+        # self.dialog.setLayout(vbox)
+        # self.dialog.setWindowModality(Qt.ApplicationModal)
+        # self.dialog.exec_()
+        # if self.filePath:
+        #     self.AutoRecognition.setEnabled(True)
 
 
     def modelChoose(self):
-        print(self.comboBox.currentText())
-        lg_idx = {'Chinese & English': 'ch', 'English': 'en', 'French': 'french', 'German': 'german',
-                  'Korean': 'korean', 'Japanese': 'japan'}
-        del self.ocr
-        self.ocr = PaddleOCR(use_pdserving=False, use_angle_cls=True, det=True, cls=True, use_gpu=False,
-                             lang=lg_idx[self.comboBox.currentText()])
-        self.dialog.close()
+        pass
+        # print(self.comboBox.currentText())
+        # lg_idx = {'Chinese & English': 'ch', 'English': 'en', 'French': 'french', 'German': 'german',
+        #           'Korean': 'korean', 'Japanese': 'japan'}
+        # del self.ocr
+        # self.ocr = PaddleOCR(use_pdserving=False, use_angle_cls=True, det=True, cls=True, use_gpu=False,
+        #                      lang=lg_idx[self.comboBox.currentText()])
+        # self.dialog.close()
 
     def cancel(self):
         self.dialog.close()
@@ -2008,9 +2073,9 @@ class MainWindow(QMainWindow, WindowMixin):
                     f.write(key + '\t')
                     f.write(json.dumps(self.PPlabel[key], ensure_ascii=False) + '\n')
 
-        if mode=='Manual':
-            msg = 'Images that have been checked are saved in '+ self.PPlabelpath
-            QMessageBox.information(self, "Information", msg)
+        # if mode=='Manual':
+        #     msg = 'Images that have been checked are saved in '+ self.PPlabelpath
+        #     QMessageBox.information(self, "Information", msg)
 
     def saveCacheLabel(self):
         with open(self.Cachelabelpath, 'w', encoding='utf-8') as f:
@@ -2020,26 +2085,26 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def saveRecResult(self):
         if None in [self.PPlabelpath, self.PPlabel, self.fileStatedict]:
-            QMessageBox.information(self, "Information", "Save file first")
+            QMessageBox.information(self, "Information", "导出识别结果前请先保存文件")
             return
 
         rec_gt_dir = os.path.dirname(self.PPlabelpath) + '/rec_gt.txt'
-        crop_img_dir = os.path.dirname(self.PPlabelpath) + '/crop_img/'
-        if not os.path.exists(crop_img_dir):
-            os.mkdir(crop_img_dir)
+        # crop_img_dir = os.path.dirname(self.PPlabelpath) + '/crop_img/'
+        # if not os.path.exists(crop_img_dir):
+        #     os.mkdir(crop_img_dir)
 
         with open(rec_gt_dir, 'w', encoding='utf-8') as f:
             for key in self.fileStatedict:
                 idx = self.getImglabelidx(key)
-                for i, label in enumerate(self.PPlabel[idx]):
-                    img = cv2.imread(key)
-                    img_crop = get_rotate_crop_image(img, np.array(label['points'], np.float32))
-                    img_name = os.path.splitext(os.path.basename(idx))[0] + '_crop_'+str(i)+'.jpg'
-                    cv2.imwrite(crop_img_dir+img_name, img_crop)
-                    f.write('crop_img/'+ img_name + '\t')
+                for label in self.PPlabel[idx]:
+                    # img = cv2.imread(key)
+                    # img_crop = get_rotate_crop_image(img, np.array(label['points'], np.float32))
+                    # img_name = os.path.splitext(os.path.basename(idx))[0] + '_crop_'+str(i)+'.jpg'
+                    # cv2.imwrite(crop_img_dir+img_name, img_crop)
+                    f.write(idx + '\t')
                     f.write(label['transcription'] + '\n')
 
-        QMessageBox.information(self, "Information", "Cropped images has been saved in "+str(crop_img_dir))
+        QMessageBox.information(self, "Information", "识别结果已经导出到 "+str(rec_gt_dir))
 
 def inverted(color):
     return QColor(*[255 - v for v in color.getRgb()])
@@ -2059,8 +2124,12 @@ def get_main_app(argv=[]):
     Do everything but app.exec_() -- so that we can test the application in one thread
     """
     app = QApplication(argv)
-    app.setApplicationName(__appname__)
-    app.setWindowIcon(newIcon("app"))
+    splash = QSplashScreen(QtGui.QPixmap(':/'+"cartoon"))  # 启动界面图片地址
+    splash.show()
+    app.processEvents()
+    app.setApplicationName(__fullName__)
+    app.setWindowIcon(newIcon("logo"))
+    app.setFont(QFont("Microsoft YaHei", 10))
     # Tzutalin 201705+: Accept extra agruments to change predefined class file
     argparser = argparse.ArgumentParser()
     argparser.add_argument("--lang", default='ch', nargs="?")
@@ -2073,21 +2142,39 @@ def get_main_app(argv=[]):
                      defaultPrefdefClassFile=args.predefined_classes_file,
                      )
     win.show()
+    splash.close()
     return app, win
 
 
+def get_timestamp_from_formattime(format_time):
+    struct_time = time.strptime(format_time, '%Y-%m-%d %H:%M:%S')
+    return time.mktime(struct_time)
+
+def create_log_to_txt(str_data):
+    path_file_name = __dir__ + './log.txt'
+    if not os.path.exists(path_file_name):
+        with open(path_file_name, "w") as f:
+            print(f)
+
+    with open(path_file_name, "a") as f:
+        f.write(str_data)
+
 def main():
-    '''construct main app and run it'''
-    app, _win = get_main_app(sys.argv)
-    return app.exec_()
+    time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    # print(time)
+    s = '2021-2-15 08:00:00'
+    if get_timestamp_from_formattime(time) > get_timestamp_from_formattime(s):
+        create_log_to_txt(time + '  软件已失效,无法正常使用'+'\n')
+        # print('已过期,无法正常使用')
+        sys.exit()
+    else:
+        # print('未过期,可以正常使用')
+        app, _win = get_main_app(sys.argv)
+        return app.exec_()
 
 
 if __name__ == '__main__':
-        
+
     resource_file = './libs/resources.py'
-    if not os.path.exists(resource_file):
-        output = os.system('pyrcc5 -o libs/resources.py resources.qrc')
-        assert output is 0, "operate the cmd have some problems ,please check  whether there is a in the lib " \
-                            "directory resources.py "
     import libs.resources
     sys.exit(main())

@@ -2,19 +2,19 @@ TrainReader:
   reader_function: ppocr.data.det.dataset_traversal,TrainReader
   process_function: ppocr.data.det.db_process,DBProcessTrain
   num_workers: 8
-  img_set_dir: ./train_data/icdar2015/text_localization/
-  label_file_path: ./train_data/icdar2015/text_localization/train_icdar2015_label.txt
+  img_set_dir: ./train_data/train_data/
+  label_file_path: ./train_data/train_Label3.txt
 
 EvalReader:
   reader_function: ppocr.data.det.dataset_traversal,EvalTestReader
   process_function: ppocr.data.det.db_process,DBProcessTest
-  img_set_dir: ./train_data/icdar2015/text_localization/
-  label_file_path: ./train_data/icdar2015/text_localization/test_icdar2015_label.txt
-  test_image_shape: [736, 1280]
+  img_set_dir: ./train_data/train_data/
+  label_file_path: ./train_data/test_Label3.txt
+  test_image_shape: [960, 960]
   
 TestReader:
   reader_function: ppocr.data.det.dataset_traversal,EvalTestReader
   process_function: ppocr.data.det.db_process,DBProcessTest
-  img_set_dir: ./train_data/icdar2015/text_localization/
-  label_file_path: ./train_data/icdar2015/text_localization/test_icdar2015_label.txt
+  img_set_dir: ./train_data/train_data/
+  label_file_path: ./train_data/test_Label3.txt
   do_eval: True
